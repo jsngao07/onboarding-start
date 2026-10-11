@@ -151,11 +151,132 @@ async def test_spi(dut):
 
 @cocotb.test()
 async def test_pwm_freq(dut):
-    # Write your test here
+    clock = Clock(dut.clk, 100, units="ns")
+    cocotb.start_soon(clock.start())
+
+    dut.ena.value = 1
+    dut.rst_n.value = 0
+    dut.ui_in.value = ui_in_logicarray(1, 0, 0)
+    dut.uio_in.value = 0
+    await ClockCycles(dut.clk, 5)
+    dut.rst_n.value = 1
+    await ClockCycles(dut.clk, 5)
+
+    #50% PWM output
+    await send_spi_transaction(dut,1,0x00,0x01)
+    await send_spi_transaction(dut, 1,0x02,0x01)
+    await send_spi_transaction(dut,1,0x04,0x80)
+    await ClockCycles(dut.clk, 10000)
+    
+    previous = int(dut .uo_out.value)&1
+    rising_edges = []
+
+    while len(rising_edges) < 2:
+        await RisingEdge(dut.clk)
+        current = int(dut.uo_out.value)&1
+        if current == 1 and previous == 0:
+            rising_edges.append(cocotb.utils.get_sim_time(units="ns"))
+        previous = current
+    t1,t2 = rising_edges
+
+    period = t2 - t1
+    hz = 1e9 / period
+    dut._log.info(f"PWM Frequency: {hz:.2f} Hz")
+    assert 2970 <= hz <=3030, f"Expected around 3000Hz, got {hz:.2f} Hz"
     dut._log.info("PWM Frequency test completed successfully")
 
 
 @cocotb.test()
 async def test_pwm_duty(dut):
-    # Write your test here
+    
+    clock = Clock(dut.clk, 100, units="ns")
+    cocotb.start_soon(clock.start())
+
+    dut.ena.value = 1
+    dut.rst_n.value = 0
+    dut.ui_in.value = ui_in_logicarray(1, 0, 0)
+    dut.uio_in.value = 0
+
+    await ClockCycles(dut.clk, 5)
+    dut.rst_n.value = 1
+    await ClockCycles(dut.clk, 5)
+
+    #output 0 and PWM
+    await send_spi_transaction(dut, 1, 0x00, 0x01)
+    await send_spi_transaction(dut, 1, 0x02, 0x01)
+
+    #0% duty
+    await send_spi_transaction(dut, 1, 0x04, 0x00)
+    await ClockCycles(dut.clk, 10000)
+
+    for _ in range(1000):
+        await RisingEdge(dut.clk)
+        output = int(dut.uo_out.value) & 1
+        assert output == 0, "Output expected to be around 0"
+
+    #50% duty
+    await send_spi_transaction(dut, 1, 0x04, 0x80)
+    await ClockCycles(dut.clk, 10000)
+
+    previous = int(dut.uo_out.value) & 1
+    rising_edges = []
+    falling_edges = []
+
+    while len(rising_edges) < 2 or len(falling_edges) < 1:
+        await RisingEdge(dut.clk)
+        current = int(dut.uo_out.value) & 1
+        time_ns = cocotb.utils.get_sim_time(units="ns")
+
+        if current == 1 and previous == 0:
+            rising_edges.append(time_ns)
+        elif current == 0 and previous == 1:
+            falling_edges.append(time_ns)
+
+        previous = current
+
+    period_ns = rising_edges[1] - rising_edges[0]
+    falling_between = [
+        t for t in falling_edges
+        if rising_edges[0] < t < rising_edges[1]
+    ]
+
+    assert falling_between, " no falling edge found"
+
+    high_time_ns = falling_between[0] - rising_edges[0]
+    measured_duty = high_time_ns / period_ns * 100
+
+    assert abs(measured_duty - 50) <= 1, (
+        f"Expected around 50%, got {measured_duty:.2f}%"
+    )
+
+    #100% duty
+    await send_spi_transaction(dut, 1, 0x04, 0xFF)
+    await ClockCycles(dut.clk, 10000)
+
+    for _ in range(1000):
+        await RisingEdge(dut.clk)
+        output = int(dut.uo_out.value) & 1
+        assert output == 1, "Output expected to be around 100%"
+
+
+    # Output disabled, PWM enabled
+    await send_spi_transaction(dut, 1, 0x04, 0x80)
+
+    await send_spi_transaction(dut, 1, 0x00, 0x00)
+    await send_spi_transaction(dut, 1, 0x02, 0x01)
+
+    for _ in range(10000):
+        await cocotb.triggers.Timer(100, units="ns")
+        current = int(dut.uo_out.value) & 1
+        assert current == 0, "Disabled output went high"
+
+    #Output enabled, PWM disabled
+    await send_spi_transaction(dut, 1, 0x02, 0x00)
+    await send_spi_transaction(dut, 1, 0x00, 0x01)
+
+    for _ in range(10000):
+        await cocotb.triggers.Timer(100, units="ns")
+        current = int(dut.uo_out.value) & 1
+        assert current ==1, "Output expected to be high"
+    
     dut._log.info("PWM Duty Cycle test completed successfully")
