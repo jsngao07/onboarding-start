@@ -2,7 +2,7 @@
 title: "ASIC Onboarding Project - Jason Gao"  
 author: "Jason Gao"  
 description: "SPI-controlled PWM peripheral for Tiny Tapeout."  
-top_module: "tt_um_uwasic_onboarding_your_name"  # Match your top module name  
+top_module: "tt_um_uwasic_onboarding_jason_gao"  # Match your top module name  
 source_files:  
   - "spi peripheral"
   - pwm_peripheral.v  
