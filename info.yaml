@@ -1,17 +1,19 @@
 # info.yaml  
-title: "ASIC Onboarding Project - Jason Gao"  
-author: "Jason Gao"
-Discord: "glt735"
-description: "SPI-controlled PWM peripheral for Tiny Tapeout."  
-language: "verilog"
-clock_hz: 10000000  # 10 MHz clock frequency
-tiles: 1  # Number of tiles in the design
+project:
+  title: "ASIC Onboarding Project - Jason Gao"  
+  author: "Jason Gao"
+  discord: "glt735"
+  description: "SPI-controlled PWM peripheral for Tiny Tapeout."  
+  language: "Verilog"
+  clock_hz: 10000000  # 10 MHz clock frequency
+  tiles: "1x1"
 
-top_module: "tt_um_uwasic_onboarding_jason_gao"  # Match your top module name  
-source_files:  
-  - "spi_peripheral.v"
-  - "pwm_peripheral.v"  
-  - "project.v"
+
+  top_module: "tt_um_uwasic_onboarding_jason_gao"  # Match your top module name  
+  source_files:  
+    - "spi_peripheral.v"
+    - "pwm_peripheral.v"  
+    - "project.v"
 
 # NOT REQUIRED
 pinout:
@@ -45,4 +47,4 @@ pinout:
   uio[6]: "OUT_E"
   uio[7]: "OUT_F"
 
-  yaml_version: 6
+yaml_version: 6
